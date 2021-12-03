@@ -1,39 +1,51 @@
 use structopt::StructOpt;
-use anyhow::{Context, Result};
-use log::{info};
+use std::process::Command;
+use std::str::from_utf8;
+use anyhow::{Result};
+use log::{info, error};
 
-/// Search for a pattern in a file and display the lines that contain it.
+/// Download a trimmed video from Youtube
 #[derive(StructOpt)]
 struct Cli {
-    /// The pattern to look for
-    pattern: String,
-    /// The path to the file to read
-    #[structopt(parse(from_os_str))]
-    path: std::path::PathBuf,
-}
-
-fn find_matches(content: &str, pattern: &str, mut writer: impl std::io::Write) {
-    for line in content.lines() {
-        if line.contains(pattern) {
-            writeln!(writer, "{}", line);
-        }
-    }
+    /// The url of the video to look download (e.g.:https://www.youtube.com/watch?v=dQw4w9WgXcQ)
+    url: String,
+    /// The start of the video in the format HH:mm:ss (e.g.: 01:15:00)
+    start: String,
+    /// The end of the video in the format HH:mm:ss (e.g.: 01:20:00)
+    end: String,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
-    info!("starting up");
+    info!("Starting");
     let args = Cli::from_args();
-    let content = std::fs::read_to_string(&args.path)
-        .with_context(|| format!("could not read file `{}`", args.path.display()))?;
+    let video_output = Command::new("youtube-dl")
+        .arg("-f")
+        .arg("bestvideo[ext=mp4]+bestaudio")
+        .arg("-o")
+        .arg("file")
+        .arg(&args.url)
+        .output()?;
 
-    find_matches(&content, &args.pattern, &mut std::io::stdout());
+    if !video_output.status.success() {
+        error!("stderr youtube-dl: {}", from_utf8(&video_output.stderr).unwrap());
+    }
+
+    info!("Downloaded video! {}", from_utf8(&video_output.stdout).unwrap());
+
+    let ffmpeg_output = Command::new("ffmpeg")
+        .arg("-i")
+        .arg("file.mp4")
+        .arg("-ss")
+        .arg(&args.start)
+        .arg("-t")
+        .arg(&args.end)
+        .arg("cut.mp4")
+        .output()?;
+
+    if !ffmpeg_output.status.success() {
+        error!("stderr ffmpeg: {}", from_utf8(&ffmpeg_output.stderr).unwrap());
+    }
+
     Ok(())
-}
-
-#[test]
-fn find_a_match() {
-    let mut result = Vec::new();
-    find_matches("lorem ipsum\ndolor sit amet", "lorem", &mut result);
-    assert_eq!(result, b"lorem ipsum\n");
 }

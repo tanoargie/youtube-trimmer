@@ -121,7 +121,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "grrs"
+name = "youtube-trimmer"
 version = "0.1.0"
 dependencies = [
  "anyhow",
