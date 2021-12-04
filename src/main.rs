@@ -1,4 +1,5 @@
 use anyhow::Result;
+use indicatif::ProgressBar;
 use log::{error, info};
 use regex::Regex;
 use std::error::Error;
@@ -30,11 +31,13 @@ fn main() -> Result<(), Box<dyn Error>> {
     };
 
     let video_output = Command::new("youtube-dl")
-        .arg("-f")
-        .arg("bestvideo[ext=mp4]+bestaudio")
-        .arg("-o")
-        .arg("file")
-        .arg(&args.url)
+        .args([
+            "-f",
+            "bestvideo[ext=mp4]+bestaudio",
+            "-o",
+            "file",
+            &args.url,
+        ])
         .output()?;
 
     if !video_output.status.success() {
@@ -50,13 +53,15 @@ fn main() -> Result<(), Box<dyn Error>> {
     );
 
     let ffmpeg_output = Command::new("ffmpeg")
-        .arg("-i")
-        .arg("file.mp4")
-        .arg("-ss")
-        .arg(&args.start)
-        .arg("-to")
-        .arg(&args.end)
-        .arg("cut.mp4")
+        .args([
+            "-i",
+            "file.mp4",
+            "-ss",
+            &args.start,
+            "-to",
+            &args.end,
+            "cut.mp4",
+        ])
         .output()?;
 
     if !ffmpeg_output.status.success() {
