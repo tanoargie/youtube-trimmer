@@ -54,7 +54,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .arg("file.mp4")
         .arg("-ss")
         .arg(&args.start)
-        .arg("-t")
+        .arg("-to")
         .arg(&args.end)
         .arg("cut.mp4")
         .output()?;
