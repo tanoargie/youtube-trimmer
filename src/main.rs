@@ -3,8 +3,7 @@ use indicatif::ProgressBar;
 use log::{error, info};
 use regex::Regex;
 use std::error::Error;
-use std::process::{Command, Stdio};
-use std::str::from_utf8;
+use std::process::Command;
 use structopt::StructOpt;
 
 /// Download a trimmed video from Youtube
