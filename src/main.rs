@@ -3,7 +3,7 @@ use indicatif::ProgressBar;
 use log::{error, info};
 use regex::Regex;
 use std::error::Error;
-use std::process::Command;
+use std::process::{Command, Stdio};
 use std::str::from_utf8;
 use structopt::StructOpt;
 
@@ -30,30 +30,41 @@ fn main() -> Result<(), Box<dyn Error>> {
         false => return Err("Remember start and end should be in the format HH:mm:ss".into()),
     };
 
-    let video_output = Command::new("youtube-dl")
+    let mut video = Command::new("youtube-dl")
         .args([
+            "-q",
             "-f",
             "bestvideo[ext=mp4]+bestaudio",
             "-o",
             "file",
             &args.url,
         ])
-        .output()?;
+        .spawn()
+        .unwrap();
 
-    if !video_output.status.success() {
-        error!(
-            "stderr youtube-dl: {}",
-            from_utf8(&video_output.stderr).unwrap()
-        );
+    let mut done = false;
+
+    let spinner_youtube = ProgressBar::new_spinner();
+    while !done {
+        match video.try_wait() {
+            Ok(Some(_status)) => {
+                done = true;
+            }
+            Ok(None) => {
+                spinner_youtube.set_message("Downloading youtube video...");
+            }
+            Err(e) => {
+                error!("Error trying to download video: {}", e);
+                done = true;
+            }
+        };
     }
+    spinner_youtube.finish_with_message("Done!");
 
-    info!(
-        "Downloaded video! {}",
-        from_utf8(&video_output.stdout).unwrap()
-    );
-
-    let ffmpeg_output = Command::new("ffmpeg")
+    let mut ffmpeg = Command::new("ffmpeg")
         .args([
+            "-loglevel",
+            "quiet",
             "-i",
             "file.mp4",
             "-ss",
@@ -62,13 +73,24 @@ fn main() -> Result<(), Box<dyn Error>> {
             &args.end,
             "cut.mp4",
         ])
-        .output()?;
+        .spawn()
+        .unwrap();
 
-    if !ffmpeg_output.status.success() {
-        error!(
-            "stderr ffmpeg: {}",
-            from_utf8(&ffmpeg_output.stderr).unwrap()
-        );
+    let spinner_ffmpeg = ProgressBar::new_spinner();
+    done = false;
+    while !done {
+        match ffmpeg.try_wait() {
+            Ok(Some(_status)) => {
+                done = true;
+            }
+            Ok(None) => {
+                spinner_ffmpeg.set_message("Trimming video...");
+            }
+            Err(e) => {
+                error!("Error trying to trim video: {}", e);
+                done = true;
+            }
+        };
     }
 
     Ok(())
