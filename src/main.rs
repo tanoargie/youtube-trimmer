@@ -26,7 +26,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     for time in vec![&args.start, &args.end] {
         match youtrmr::is_valid_time(time) {
             true => (),
-            false => return Err("Time should be in format HH:mm:ss".into()),
+            false => error!("{} should be in the following format: HH:mm:ss", time),
         }
     }
 
