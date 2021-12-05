@@ -1,10 +1,11 @@
 use anyhow::Result;
 use indicatif::ProgressBar;
 use log::{error, info};
-use regex::Regex;
 use std::error::Error;
 use std::process::Command;
 use structopt::StructOpt;
+
+extern crate youtrmr;
 
 /// Download a trimmed video from Youtube
 #[derive(StructOpt)]
@@ -20,14 +21,14 @@ struct Cli {
 fn main() -> Result<(), Box<dyn Error>> {
     env_logger::init();
     info!("Starting...");
-    let time_regex = Regex::new(r"^\d{2}:\d{2}:\d{2}$").unwrap();
     let args = Cli::from_args();
 
-    let has_valid_times = time_regex.is_match(&args.start) && time_regex.is_match(&args.end);
-    match has_valid_times {
-        true => (),
-        false => return Err("Remember start and end should be in the format HH:mm:ss".into()),
-    };
+    for time in vec![&args.start, &args.end] {
+        match youtrmr::is_valid_time(time) {
+            true => (),
+            false => return Err("Time should be in format HH:mm:ss".into()),
+        }
+    }
 
     let mut video = Command::new("youtube-dl")
         .args([
