@@ -2,6 +2,7 @@ use anyhow::Result;
 use indicatif::ProgressBar;
 use log::{error, info};
 use std::error::Error;
+use std::fs;
 use std::process::Command;
 use structopt::StructOpt;
 
@@ -26,7 +27,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     for time in vec![&args.start, &args.end] {
         match youtrmr::is_valid_time(time) {
             true => (),
-            false => error!("{} should be in the following format: HH:mm:ss", time),
+            false => {
+                error!("{} should be in the following format: HH:mm:ss", time);
+                return Err("Format invalid".into());
+            }
         }
     }
 
@@ -55,7 +59,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
             Err(e) => {
                 error!("Error trying to download video: {}", e);
-                done = true;
+                return Err(e.into());
             }
         };
     }
@@ -88,10 +92,12 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
             Err(e) => {
                 error!("Error trying to trim video: {}", e);
-                done = true;
+                return Err(e.into());
             }
         };
     }
+
+    fs::remove_file("file.mp4")?;
 
     Ok(())
 }
