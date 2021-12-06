@@ -1,13 +1,14 @@
 use anyhow::Result;
+use indicatif::ProgressBar;
 use log::{error, info};
 use std::error::Error;
-use std::fs;
 use std::process::Command;
+use std::str;
 use structopt::StructOpt;
 
 extern crate youtrmr;
 
-use youtrmr::{is_valid_time, pooling_command};
+use youtrmr::is_valid_time;
 
 /// Download a trimmed video from Youtube
 #[derive(StructOpt)]
@@ -16,8 +17,10 @@ struct Cli {
     url: String,
     /// The start of the video in the format HH:mm:ss (e.g.: 01:15:00)
     start: String,
-    /// The end of the video in the format HH:mm:ss (e.g.: 01:20:00)
-    end: String,
+    /// The duration of the cut in the format HH:mm:ss (e.g.: 01:20:00)
+    duration: String,
+    /// Output filename
+    filename: String,
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -25,7 +28,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     info!("Starting...");
     let args = Cli::from_args();
 
-    for time in vec![&args.start, &args.end] {
+    for time in vec![&args.start, &args.duration] {
         match is_valid_time(time) {
             true => (),
             false => {
@@ -35,48 +38,58 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
     }
 
-    let video = &mut Command::new("youtube-dl")
-        .args([
-            "-q",
-            "-f",
-            "bestvideo[ext=mp4]+bestaudio",
-            "-o",
-            "file",
-            &args.url,
-        ])
-        .spawn()
-        .unwrap();
+    let youtube_dl_command = Command::new("youtube-dl")
+        .args(["-g", &args.url])
+        .output()?;
 
-    pooling_command(
-        String::from("Done downloading video!"),
-        String::from("Downloading youtube video..."),
-        String::from("Error trying to download video"),
-        video,
-    )?;
+    let youtube_url = str::from_utf8(&youtube_dl_command.stdout).unwrap();
+
+    let mut urls: Vec<&str> = vec![];
+    for line in youtube_url.lines() {
+        urls.push(line);
+    }
 
     let ffmpeg = &mut Command::new("ffmpeg")
         .args([
             "-loglevel",
             "quiet",
-            "-i",
-            "file.mp4",
             "-ss",
             &args.start,
-            "-to",
-            &args.end,
-            "cut.mp4",
+            "-i",
+            urls[0],
+            "-ss",
+            &args.start,
+            "-i",
+            urls[1],
+            "-t",
+            &args.duration,
+            "-map",
+            "0:v",
+            "-map",
+            "1:a",
+            format!("{}.mp4", &args.filename),
         ])
         .spawn()
         .unwrap();
 
-    pooling_command(
-        String::from("Done trimming!"),
-        String::from("Trimming video..."),
-        String::from("Error trimming video"),
-        ffmpeg,
-    )?;
-
-    fs::remove_file("file.mp4")?;
+    let mut done = false;
+    let spinner = ProgressBar::new_spinner();
+    spinner.set_message("Trimming video...");
+    while !done {
+        match ffmpeg.try_wait() {
+            Ok(Some(_status)) => {
+                done = true;
+            }
+            Ok(None) => {
+                spinner.tick();
+            }
+            Err(e) => {
+                error!("{}: {}", "Error trimming video", e);
+                return Err(e.into());
+            }
+        };
+    }
+    spinner.finish_with_message("Done trimming!");
 
     Ok(())
 }

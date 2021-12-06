@@ -1,36 +1,4 @@
-use indicatif::ProgressBar;
-use log::error;
 use regex::Regex;
-use std::error::Error;
-use std::process::Child;
-
-pub fn pooling_command(
-    finish_message: String,
-    pooling_message: String,
-    error_message: String,
-    pooling: &mut Child,
-) -> Result<(), Box<dyn Error>> {
-    let mut done = false;
-    let spinner = ProgressBar::new_spinner();
-    spinner.set_message(pooling_message);
-    while !done {
-        match pooling.try_wait() {
-            Ok(Some(_status)) => {
-                done = true;
-            }
-            Ok(None) => {
-                spinner.tick();
-            }
-            Err(e) => {
-                error!("{}", error_message);
-                return Err(e.into());
-            }
-        };
-    }
-    spinner.finish_with_message(finish_message);
-
-    Ok(())
-}
 
 pub fn is_valid_time(time: &str) -> bool {
     let time_regex = Regex::new(r"^\d{2}:\d{2}:\d{2}$").unwrap();
