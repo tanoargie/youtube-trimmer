@@ -48,6 +48,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     for line in youtube_url.lines() {
         urls.push(line);
     }
+    let filename_with_format = format!("{}.mp4", &args.filename);
 
     let ffmpeg = &mut Command::new("ffmpeg")
         .args([
@@ -67,7 +68,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             "0:v",
             "-map",
             "1:a",
-            format!("{}.mp4", &args.filename),
+            &filename_with_format,
         ])
         .spawn()
         .unwrap();
