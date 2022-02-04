@@ -17,8 +17,8 @@ struct Cli {
     url: String,
     /// The start of the video in the format HH:mm:ss (e.g.: 01:15:00)
     start: String,
-    /// The duration of the cut in the format HH:mm:ss (e.g.: 01:20:00)
-    duration: String,
+    /// The end of the video in the format HH:mm:ss (e.g.: 01:20:00)
+    end: String,
     /// Output filename
     filename: String,
 }
@@ -28,7 +28,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     info!("Starting...");
     let args = Cli::from_args();
 
-    for time in vec![&args.start, &args.duration] {
+    for time in vec![&args.start, &args.end] {
         match is_valid_time(time) {
             true => (),
             false => {
@@ -62,8 +62,8 @@ fn main() -> Result<(), Box<dyn Error>> {
             &args.start,
             "-i",
             urls[1],
-            "-t",
-            &args.duration,
+            "-to",
+            &args.end,
             "-map",
             "0:v",
             "-map",
