@@ -9,8 +9,8 @@ Rust CLI to download trimmed youtube videos
 
 ### Usage
 
-This Rust CLI application helps you download youtube video at `url` from `start` (in HH:mm:ss format) with duration `duration` (in HH:mm:ss format), and will save it as `filename`.
+This Rust CLI application helps you download youtube video at `url` from `start` (in HH:mm:ss format) to `end` (in HH:mm:ss format), and will save it as `filename`.
 
-`./youtrmr [URL] [START] [DURATION] [FILENAME]`
+`./youtrmr [URL] [START] [END] [FILENAME]`
 
 ![youtrmr in action](/docs/youtrmr.gif)
